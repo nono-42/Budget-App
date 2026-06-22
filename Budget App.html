@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Budget</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<meta name="theme-color" content="#EDEAE3">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect width='180' height='180' rx='40' fill='%231C1B19'/%3E%3Ctext x='50%25' y='52%25' font-size='96' font-family='-apple-system,sans-serif' font-weight='800' fill='%23E8590C' text-anchor='middle' dominant-baseline='central'%3E%E2%82%AC%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#EDEAE3; --surface:#FBFAF7; --text:#1C1B19; --muted:#6B6862;
+    --line:#D9D5CC; --panel:#F2EFE8; --accent:#E8590C; --green:#4D7C4F; --red:#B23A2E;
+    --hero-bg:#1C1B19; --hero-text:#FFFFFF; --hero-muted:#A8A49A; --hero-track:#3A3833; --hero-neg:#F08C72;
+    --chip-bg:#FFFFFF; --chip-active-bg:#1C1B19; --chip-active-text:#FFFFFF; --ic-bg:#F2EFE8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme]){
+      --bg:#161513; --surface:#211F1C; --text:#ECE8E1; --muted:#9A958C;
+      --line:#34312C; --panel:#2A2825; --accent:#F2691C; --green:#6FA86F; --red:#E0735F;
+      --hero-bg:#2B2723; --hero-text:#FFFFFF; --hero-muted:#A8A49A; --hero-track:#46413A; --hero-neg:#F49A82;
+      --chip-bg:#211F1C; --chip-active-bg:#ECE8E1; --chip-active-text:#161513; --ic-bg:#2A2825;
+    }
+  }
+  [data-theme="dark"]{
+    --bg:#161513; --surface:#211F1C; --text:#ECE8E1; --muted:#9A958C;
+    --line:#34312C; --panel:#2A2825; --accent:#F2691C; --green:#6FA86F; --red:#E0735F;
+    --hero-bg:#2B2723; --hero-text:#FFFFFF; --hero-muted:#A8A49A; --hero-track:#46413A; --hero-neg:#F49A82;
+    --chip-bg:#211F1C; --chip-active-bg:#ECE8E1; --chip-active-text:#161513; --ic-bg:#2A2825;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-size:16px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased;
+    transition:background .2s,color .2s;}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+  #app{max-width:480px; margin:0 auto; padding-bottom:96px;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+  input{font-family:inherit; font-size:16px; color:var(--text);}
+  input:focus{outline:none;}
+  .eyebrow{font-size:11px; letter-spacing:.2em; text-transform:uppercase; font-weight:700; color:var(--accent);}
+  .h1{font-size:26px; font-weight:800; line-height:1.1;}
+  .sect{font-size:11px; letter-spacing:.18em; text-transform:uppercase; font-weight:700; color:var(--muted);}
+  .px{padding-left:20px; padding-right:20px;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:16px;}
+  .row{display:flex; align-items:center;}
+  .focusable:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  .hero{background:var(--hero-bg); color:var(--hero-text); border-radius:20px; padding:20px;}
+  .hero .lbl{font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--hero-muted);}
+  .hero .big{font-weight:800; line-height:1; margin-top:4px;}
+  .hero .big .num{font-size:42px;} .hero .big .cur{font-size:20px; color:var(--hero-muted); margin-left:4px;}
+  .stat .k{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--hero-muted);}
+  .stat .v{font-size:13px;}
+
+  .amt{width:100%; font-size:26px; font-weight:800; background:transparent; border:none; padding:4px 0;}
+  .addbtn{height:48px; width:48px; border-radius:12px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; flex:0 0 auto;}
+  .addbtn:active{transform:scale(.95);}
+  .chips{display:flex; gap:8px; overflow-x:auto; padding:12px 2px 4px; margin:0 -2px; -webkit-overflow-scrolling:touch;}
+  .chip{flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; font-size:14px; font-weight:600; background:var(--chip-bg); border:1px solid var(--line); color:var(--text); white-space:nowrap;}
+  .chip.on{background:var(--chip-active-bg); color:var(--chip-active-text); border-color:var(--chip-active-bg);}
+  .note{width:100%; margin-top:8px; background:transparent; border:none; border-bottom:1px solid var(--line); padding:6px 2px; font-size:14px;}
+
+  .bcard{padding:14px; margin-top:10px;}
+  .bar{height:8px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:8px;}
+  .bar > span{display:block; height:100%; border-radius:99px; transition:width .25s;}
+
+  .list .li{display:flex; align-items:center; gap:12px; padding:12px 14px;}
+  .ic{height:36px; width:36px; border-radius:10px; background:var(--ic-bg); display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto;}
+  .del{padding:6px; border-radius:6px; color:var(--muted); flex:0 0 auto;}
+  .empty{border:1px dashed var(--line); border-radius:14px; padding:24px; text-align:center; font-size:14px; color:var(--muted);}
+
+  .nav{position:fixed; left:0; right:0; bottom:0; z-index:40; background:var(--bg); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); transition:background .2s;}
+  .navin{max-width:480px; margin:0 auto; display:flex; padding:8px 12px 6px;}
+  .navbtn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0;}
+  .navbtn .t{font-size:10px; font-weight:600; color:var(--muted);}
+  .navbtn.on .t{color:var(--text);}
+  .navbtn svg{width:22px; height:22px; stroke:var(--muted); fill:none; stroke-width:2;}
+  .navbtn.on svg{stroke:var(--accent); stroke-width:2.4;}
+
+  .scrim{position:fixed; inset:0; z-index:50; background:rgba(10,9,8,.5); display:flex; align-items:flex-end; justify-content:center; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom));}
+  .sheet{width:100%; max-width:480px; background:var(--surface); border-radius:18px; padding:20px; max-height:80vh; overflow-y:auto;}
+  .btn{flex:1; padding:13px; border-radius:12px; font-size:14px; font-weight:700; border:1px solid var(--line); background:var(--panel); color:var(--text);}
+  .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .btn.danger{background:var(--red); color:#fff; border-color:var(--red);}
+
+  .field{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px;}
+  .field input{width:96px; text-align:right; background:transparent; border:none;}
+  .erow{display:flex; align-items:center; gap:8px; padding:10px 12px;}
+  .erow input.name{flex:1; min-width:0; background:transparent; border:none; font-size:15px;}
+  .erow input.val{width:64px; text-align:right; background:transparent; border:none;}
+  .erow input:focus{text-decoration:underline;}
+  .emojibtn{font-size:18px; width:34px; height:34px; border-radius:9px; background:var(--panel); display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
+  .addline{width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:12px; font-size:14px; font-weight:700; color:var(--accent); border-top:1px solid var(--line);}
+  .divider{border-top:1px solid var(--line);}
+  .seg{display:flex; gap:6px; background:var(--panel); padding:4px; border-radius:12px;}
+  .seg button{flex:1; padding:10px; border-radius:9px; font-size:13px; font-weight:700; color:var(--muted);}
+  .seg button.on{background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  .egrid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
+  .egrid button{font-size:24px; aspect-ratio:1; border-radius:10px; background:var(--panel); display:flex; align-items:center; justify-content:center;}
+  .egrid button:active{transform:scale(.9);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div class="nav"><div class="navin" id="nav"></div></div>
+
+<script>
+const KEY = "budget_v1";
+const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const monthLabel = (d=new Date()) => MONTHS[d.getMonth()] + " " + d.getFullYear();
+const fmt = n => (n||0).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const parseNum = s => { const v=parseFloat(String(s).replace(",",".")); return isNaN(v)?0:v; };
+const uid = () => Math.random().toString(36).slice(2,9);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const EMOJIS = ["🛒","🍔","🍽️","☕","🍺","⛽","🚗","🏍️","🅿️","🚆","✈️","🏠","🛍️","👕","👟","💪","🎮","🎬","🎵","📚","🎁","✨","💸","💳","🧾","💡","🔧","🪚","🪙","📱","💻","📺","🏥","💊","🐕","🌱","🌸","💐","❤️","🔥","🎉","🍕","🥦","🧴","🪑","📌","🏷️","💰"];
+
+const DEFAULTS = {
+  config:{
+    income:1400, savingsGoal:4000, theme:"auto",
+    fixedCosts:[
+      {id:"f1",name:"Gym",amount:30,emoji:"🏋️"},
+      {id:"f2",name:"Friseur",amount:30,emoji:"✂️"},
+      {id:"f3",name:"Handy",amount:8.99,emoji:"📱"},
+      {id:"f4",name:"Abos",amount:10,emoji:"📺"},
+      {id:"f5",name:"Auto-Versicherung (mtl.)",amount:41.67,emoji:"🛡️"},
+      {id:"f6",name:"Motorrad-Versicherung (mtl.)",amount:16.67,emoji:"🛡️"},
+    ],
+    categories:[
+      {id:"c1",name:"Lebensmittel",budget:250,emoji:"🛒"},
+      {id:"c2",name:"Sprit",budget:100,emoji:"⛽"},
+      {id:"c3",name:"Essen gehen",budget:120,emoji:"🍽️"},
+      {id:"c4",name:"Gönnen",budget:230,emoji:"✨"},
+    ],
+  },
+  month:{label:monthLabel(), expenses:[]},
+  history:[],
+  savings:{total:0},
+};
+
+let state;
+function load(){
+  try{ const r=localStorage.getItem(KEY); if(r){ const p=JSON.parse(r);
+    const cfg=p.config||{}; if(!cfg.theme) cfg.theme="auto";
+    return {config:cfg,month:p.month,history:p.history||[],savings:p.savings||{total:0}}; } }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify({config:state.config,month:state.month,history:state.history,savings:state.savings})); }catch(e){} }
+
+state = load();
+state.ui = { tab:"overview", cat:state.config.categories[0]?.name||"", amt:"", note:"", modal:null, openHist:null, emojiTarget:null };
+
+const fixedTotal = () => state.config.fixedCosts.reduce((s,f)=>s+(+f.amount||0),0);
+const variableTotal = () => state.month.expenses.reduce((s,e)=>s+e.amount,0);
+const available = () => state.config.income - fixedTotal() - variableTotal();
+const spentByCat = name => state.month.expenses.filter(e=>e.category===name).reduce((s,e)=>s+e.amount,0);
+
+function applyTheme(){
+  const t=state.config.theme||"auto"; const root=document.documentElement;
+  if(t==="auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme",t);
+  try{ const bg=getComputedStyle(document.body).backgroundColor; const m=document.querySelector('meta[name="theme-color"]'); if(m&&bg) m.setAttribute("content",bg); }catch(e){}
+}
+
+const NAV = {
+  overview:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>',
+  savings:'<svg viewBox="0 0 24 24"><path d="M19 11a7 7 0 1 0-7 7"/><path d="M16 8h.01"/><path d="M3 13c0 3 2 5 5 5"/></svg>',
+  history:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></svg>',
+  settings:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>',
+};
+
+function viewOverview(){
+  const av = available();
+  const cats = state.config.categories.map(c=>{
+    const s=spentByCat(c.name); const pct=c.budget>0?Math.min(100,s/c.budget*100):0;
+    const over=s>c.budget, near=!over&&pct>=80;
+    const col=over?"var(--red)":near?"var(--accent)":"var(--green)";
+    return `<div class="card bcard">
+      <div class="row" style="justify-content:space-between">
+        <div class="row" style="gap:8px;font-weight:600;font-size:15px"><span>${c.emoji}</span>${esc(c.name)}</div>
+        <div class="mono" style="font-size:13px;color:${over?"var(--red)":"var(--muted)"}">${fmt(s)} / ${fmt(c.budget)} €</div>
+      </div>
+      <div class="bar"><span style="width:${pct}%;background:${col}"></span></div>
+      ${over?`<div style="margin-top:6px;font-size:12px;font-weight:600;color:var(--red)">${fmt(s-c.budget)} € über Budget</div>`:""}
+    </div>`;
+  }).join("");
+
+  const fixed = state.config.fixedCosts.map((f,i)=>`
+    <div class="li" style="${i?'border-top:1px solid var(--line)':''}">
+      <div class="row" style="gap:10px;font-size:15px;flex:1"><span>${f.emoji||"•"}</span>${esc(f.name)}</div>
+      <div class="mono" style="font-size:14px;color:var(--muted)">${fmt(f.amount)} €</div>
+    </div>`).join("");
+
+  const exp = state.month.expenses.length===0
+    ? `<div class="empty" style="margin-top:12px">Noch nichts eingetragen. Tipp oben einen Betrag ein, um zu starten.</div>`
+    : `<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">` + state.month.expenses.map(e=>{
+        const c=state.config.categories.find(x=>x.name===e.category);
+        return `<div class="card row" style="gap:12px;padding:12px 14px">
+          <span class="ic">${c?c.emoji:"•"}</span>
+          <div style="min-width:0;flex:1">
+            <div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.category)}</div>
+            ${e.note?`<div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.note)}</div>`:""}
+          </div>
+          <div class="mono" style="font-size:15px;font-weight:700">${fmt(e.amount)} €</div>
+          <button class="del focusable" data-action="del-exp" data-id="${e.id}" aria-label="Löschen">🗑️</button>
+        </div>`;
+      }).join("") + `</div>`;
+
+  return `
+  <div class="px" style="padding-top:28px;padding-bottom:8px;display:flex;align-items:flex-end;justify-content:space-between">
+    <div><div class="eyebrow">Budget</div><div class="h1">${esc(state.month.label)}</div></div>
+    <button class="focusable" data-action="ask-close" style="font-size:11px;font-weight:700;padding:8px 12px;border-radius:8px;border:1px solid var(--line);color:var(--muted);background:var(--surface)">Monat abschließen</button>
+  </div>
+
+  <div class="px"><div class="hero" style="margin-top:8px">
+    <div class="lbl">Noch verfügbar diesen Monat</div>
+    <div class="big mono"><span class="num" style="color:${av<0?'var(--hero-neg)':'var(--hero-text)'}">${fmt(av)}</span><span class="cur">€</span></div>
+    <div class="row" style="margin-top:16px;gap:8px">
+      <div class="stat mono" style="flex:1"><div class="k">Einkommen</div><div class="v" style="color:var(--hero-text)">${fmt(state.config.income)}</div></div>
+      <div class="stat mono" style="flex:1"><div class="k">Fixkosten</div><div class="v" style="color:var(--hero-muted)">−${fmt(fixedTotal())}</div></div>
+      <div class="stat mono" style="flex:1"><div class="k">Ausgaben</div><div class="v" style="color:var(--hero-muted)">−${fmt(variableTotal())}</div></div>
+    </div>
+  </div></div>
+
+  <div class="px" style="margin-top:20px"><div class="card" style="padding:16px">
+    <div class="sect" style="margin-bottom:12px">Ausgabe eintragen</div>
+    <div class="row" style="gap:8px">
+      <div style="position:relative;flex:1">
+        <input id="amt" class="amt mono" inputmode="decimal" placeholder="0,00" value="${esc(state.ui.amt)}">
+        <span class="mono" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--muted)">€</span>
+      </div>
+      <button class="addbtn focusable" data-action="add-exp" aria-label="Hinzufügen">+</button>
+    </div>
+    <div class="chips">
+      ${state.config.categories.map(c=>`<button class="chip${c.name===state.ui.cat?' on':''} focusable" data-action="pick-cat" data-name="${esc(c.name)}"><span>${c.emoji}</span>${esc(c.name)}</button>`).join("")}
+    </div>
+    <input id="note" class="note" placeholder="Notiz (optional)" value="${esc(state.ui.note)}">
+  </div></div>
+
+  <div class="px" style="margin-top:24px"><div class="sect">Budgets</div>${cats}</div>
+
+  <div class="px" style="margin-top:24px">
+    <div class="sect">Fixkosten (automatisch)</div>
+    <div class="card list" style="margin-top:12px;overflow:hidden">
+      ${fixed}
+      <div class="li" style="border-top:1px solid var(--line);background:var(--panel)">
+        <div style="flex:1;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)">Summe</div>
+        <div class="mono" style="font-size:14px;font-weight:700">${fmt(fixedTotal())} €</div>
+      </div>
+    </div>
+    <div style="font-size:12px;margin-top:8px;padding:0 2px;color:var(--muted)">Ändern unter Einstellungen.</div>
+  </div>
+
+  <div class="px" style="margin-top:24px"><div class="sect">Diesen Monat eingetragen</div>${exp}</div>
+  `;
+}
+
+function viewSavings(){
+  const goal=state.config.savingsGoal||4000, total=state.savings.total||0;
+  const pct=Math.min(100,total/goal*100), rem=Math.max(0,goal-total);
+  return `
+  <div class="px" style="padding-top:28px">
+    <div class="eyebrow">Dein eigenes Ding</div><div class="h1">Spar-Topf</div>
+    <div class="hero" style="margin-top:16px;text-align:center;padding:24px">
+      <div class="lbl">Gespart</div>
+      <div class="big mono" style="margin-top:4px"><span class="num" style="font-size:48px">${fmt(total)}</span><span class="cur">€</span></div>
+      <div class="bar" style="height:12px;background:var(--hero-track);margin-top:20px"><span style="width:${pct}%;background:var(--accent)"></span></div>
+      <div class="row mono" style="justify-content:space-between;margin-top:8px;font-size:12px;color:var(--hero-muted)">
+        <span>${Math.round(pct)} %</span><span>Ziel ${fmt(goal)} €</span>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;padding:20px;text-align:center">
+      ${rem>0
+        ? `<div style="font-size:15px">Noch <span class="mono" style="font-weight:700;color:var(--accent)">${fmt(rem)} €</span> bis zum Notgroschen.</div>`
+        : `<div style="font-size:15px;font-weight:700;color:var(--green)">Notgroschen steht! Zeit, in ETF + Startkapital zu splitten.</div>`}
+    </div>
+    <div class="card" style="margin-top:16px;padding:16px">
+      <div class="sect" style="margin-bottom:12px">Manuell anpassen</div>
+      <div style="position:relative">
+        <input id="sav" class="amt mono" inputmode="decimal" placeholder="0,00">
+        <span class="mono" style="position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--muted)">€</span>
+      </div>
+      <div class="row" style="gap:8px;margin-top:12px">
+        <button class="btn focusable" data-action="sav-add" style="background:var(--green);color:#fff;border-color:var(--green)">+ Einzahlen</button>
+        <button class="btn focusable" data-action="sav-sub">− Entnehmen</button>
+      </div>
+      <div style="font-size:12px;margin-top:12px;color:var(--muted)">Beim Monatsabschluss wandert dein „noch verfügbar“ automatisch hier rein.</div>
+    </div>
+  </div>`;
+}
+
+function viewHistory(){
+  if(state.history.length===0)
+    return `<div class="px" style="padding-top:28px"><div class="eyebrow">Rückblick</div><div class="h1">Verlauf</div>
+      <div class="empty" style="margin-top:20px">Noch keine abgeschlossenen Monate. Schließ deinen ersten Monat ab, um ihn hier zu vergleichen.</div></div>`;
+  const items=state.history.map(h=>{
+    const open=state.ui.openHist===h.id;
+    const detail=open?`<div style="padding:0 16px 16px;border-top:1px solid var(--line)">
+        <div class="row" style="gap:8px;padding:12px 0">
+          <div style="flex:1;background:var(--panel);border-radius:8px;padding:8px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Fixkosten</div><div class="mono" style="font-weight:700">${fmt(h.fixedTotal)} €</div></div>
+          <div style="flex:1;background:var(--panel);border-radius:8px;padding:8px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Ausgaben</div><div class="mono" style="font-weight:700">${fmt(h.variableTotal)} €</div></div>
+        </div>
+        ${(h.byCategory||[]).map(c=>`<div class="row" style="justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:var(--muted)">${esc(c.name)}</span><span class="mono" style="color:${c.spent>c.budget?'var(--red)':'var(--text)'}">${fmt(c.spent)} / ${fmt(c.budget)} €</span></div>`).join("")}
+      </div>`:"";
+    return `<div class="card" style="overflow:hidden">
+      <button class="focusable" data-action="toggle-hist" data-id="${h.id}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;text-align:left">
+        <div><div style="font-size:15px;font-weight:800">${esc(h.label)}</div><div class="mono" style="font-size:12px;color:var(--green)">+ ${fmt(h.saved)} € gespart</div></div>
+        <div class="row" style="gap:10px"><div class="mono" style="font-size:14px;color:var(--muted)">${fmt(h.total)} €</div><span style="color:var(--muted);transition:transform .15s;display:inline-block;transform:rotate(${open?90:0}deg)">›</span></div>
+      </button>${detail}
+    </div>`;
+  }).join("");
+  return `<div class="px" style="padding-top:28px"><div class="eyebrow">Rückblick</div><div class="h1">Verlauf</div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px">${items}</div></div>`;
+}
+
+function viewSettings(){
+  const th=state.config.theme||"auto";
+  const seg=`<div class="seg">
+    <button class="${th==='auto'?'on':''} focusable" data-action="set-theme" data-theme="auto">Auto</button>
+    <button class="${th==='light'?'on':''} focusable" data-action="set-theme" data-theme="light">Hell</button>
+    <button class="${th==='dark'?'on':''} focusable" data-action="set-theme" data-theme="dark">Dunkel</button>
+  </div>`;
+  const cats=state.config.categories.map((c,i)=>`<div class="erow" style="${i?'border-top:1px solid var(--line)':''}">
+      <button class="emojibtn focusable" data-action="pick-emoji" data-type="cat" data-id="${c.id}" aria-label="Emoji wählen">${c.emoji}</button>
+      <input class="name" data-field="cat-name" data-id="${c.id}" value="${esc(c.name)}">
+      <input class="val mono" data-field="cat-budget" data-id="${c.id}" inputmode="decimal" value="${c.budget}">
+      <span class="mono" style="font-size:13px;color:var(--muted)">€</span>
+      <button class="del focusable" data-action="del-cat" data-id="${c.id}" aria-label="Löschen">✕</button>
+    </div>`).join("");
+  const fix=state.config.fixedCosts.map((f,i)=>`<div class="erow" style="${i?'border-top:1px solid var(--line)':''}">
+      <button class="emojibtn focusable" data-action="pick-emoji" data-type="fix" data-id="${f.id}" aria-label="Emoji wählen">${f.emoji||"•"}</button>
+      <input class="name" data-field="fix-name" data-id="${f.id}" value="${esc(f.name)}">
+      <input class="val mono" data-field="fix-amount" data-id="${f.id}" inputmode="decimal" value="${f.amount}">
+      <span class="mono" style="font-size:13px;color:var(--muted)">€</span>
+      <button class="del focusable" data-action="del-fix" data-id="${f.id}" aria-label="Löschen">✕</button>
+    </div>`).join("");
+  return `<div class="px" style="padding-top:28px">
+    <div class="eyebrow">Konfig</div><div class="h1">Einstellungen</div>
+
+    <div class="sect" style="margin-top:24px">Darstellung</div>
+    <div style="margin-top:12px">${seg}</div>
+
+    <div class="sect" style="margin-top:24px">Grunddaten</div>
+    <div class="card" style="margin-top:12px">
+      <div class="field"><span style="font-size:15px">Einkommen / Monat</span><span class="row" style="gap:4px"><input class="mono" data-field="income" inputmode="decimal" value="${state.config.income}"><span class="mono" style="font-size:14px;color:var(--muted)">€</span></span></div>
+      <div class="divider"></div>
+      <div class="field"><span style="font-size:15px">Spar-Ziel (Notgroschen)</span><span class="row" style="gap:4px"><input class="mono" data-field="goal" inputmode="decimal" value="${state.config.savingsGoal}"><span class="mono" style="font-size:14px;color:var(--muted)">€</span></span></div>
+    </div>
+
+    <div class="sect" style="margin-top:24px">Budgets (variabel)</div>
+    <div class="card" style="margin-top:12px;overflow:hidden">${cats}
+      <button class="addline focusable" data-action="add-cat">＋ Kategorie hinzufügen</button>
+    </div>
+    <div style="font-size:12px;margin-top:8px;padding:0 2px;color:var(--muted)">Tipp aufs Emoji links, um es zu ändern.</div>
+
+    <div class="sect" style="margin-top:24px">Fixkosten</div>
+    <div class="card" style="margin-top:12px;overflow:hidden">${fix}
+      <button class="addline focusable" data-action="add-fix">＋ Fixkosten hinzufügen</button>
+    </div>
+
+    <button class="btn focusable" data-action="ask-reset" style="width:100%;margin-top:32px;color:var(--red);background:var(--surface)">Alles zurücksetzen</button>
+  </div>`;
+}
+
+function viewModal(){
+  if(state.ui.modal==="close"){
+    const av=Math.max(0,available());
+    return `<div class="scrim" data-action="modal-bg"><div class="sheet">
+      <div style="font-size:18px;font-weight:800">Monat abschließen?</div>
+      <p style="font-size:14px;margin-top:8px;color:var(--muted)"><span class="mono" style="font-weight:700;color:${available()>=0?'var(--green)':'var(--red)'}">${fmt(av)} €</span> wandern in deinen Spar-Topf. „${esc(state.month.label)}“ landet im Verlauf, danach startet ein neuer Monat bei null.</p>
+      <div class="row" style="gap:8px;margin-top:20px"><button class="btn focusable" data-action="modal-close">Abbrechen</button><button class="btn primary focusable" data-action="do-close">Abschließen</button></div>
+    </div></div>`;
+  }
+  if(state.ui.modal==="reset"){
+    return `<div class="scrim" data-action="modal-bg"><div class="sheet">
+      <div style="font-size:18px;font-weight:800">Alles zurücksetzen?</div>
+      <p style="font-size:14px;margin-top:8px;color:var(--muted)">Löscht alle Ausgaben, den Verlauf und den Spar-Topf. Die Standard-Kategorien kommen zurück. Das lässt sich nicht rückgängig machen.</p>
+      <div class="row" style="gap:8px;margin-top:20px"><button class="btn focusable" data-action="modal-close">Abbrechen</button><button class="btn danger focusable" data-action="do-reset">Zurücksetzen</button></div>
+    </div></div>`;
+  }
+  if(state.ui.modal==="emoji"){
+    return `<div class="scrim" data-action="modal-bg"><div class="sheet">
+      <div class="row" style="justify-content:space-between"><div style="font-size:18px;font-weight:800">Emoji wählen</div><button class="focusable" data-action="modal-close" style="font-size:20px;color:var(--muted)">✕</button></div>
+      <div class="egrid">${EMOJIS.map(e=>`<button class="focusable" data-action="set-emoji" data-emoji="${e}">${e}</button>`).join("")}</div>
+    </div></div>`;
+  }
+  return "";
+}
+
+function navHtml(){
+  const items=[["overview","Übersicht"],["savings","Sparen"],["history","Verlauf"],["settings","Einstellungen"]];
+  return items.map(([id,label])=>`<button class="navbtn${state.ui.tab===id?' on':''} focusable" data-action="tab" data-tab="${id}">${NAV[id]}<span class="t">${label}</span></button>`).join("");
+}
+
+function render(){
+  const v = state.ui.tab==="overview"?viewOverview()
+          : state.ui.tab==="savings"?viewSavings()
+          : state.ui.tab==="history"?viewHistory()
+          : viewSettings();
+  document.getElementById("app").innerHTML = v;
+  document.getElementById("nav").innerHTML = navHtml();
+  document.getElementById("modal").innerHTML = viewModal();
+  applyTheme();
+}
+
+function syncInputs(){
+  const a=document.getElementById("amt"); if(a) state.ui.amt=a.value;
+  const n=document.getElementById("note"); if(n) state.ui.note=n.value;
+}
+
+function addExpense(){
+  syncInputs();
+  const v=parseNum(state.ui.amt); if(v<=0) return;
+  state.month.expenses.unshift({id:uid(),amount:v,category:state.ui.cat,note:(state.ui.note||"").trim(),date:new Date().toISOString()});
+  state.ui.amt=""; state.ui.note=""; persist(); render();
+  const a=document.getElementById("amt"); if(a) a.focus();
+}
+function closeMonth(){
+  const saved=Math.max(0,available());
+  const entry={id:uid(),label:state.month.label,total:fixedTotal()+variableTotal(),fixedTotal:fixedTotal(),variableTotal:variableTotal(),
+    saved, byCategory:state.config.categories.map(c=>({name:c.name,spent:spentByCat(c.name),budget:c.budget})), closedAt:new Date().toISOString()};
+  state.history.unshift(entry);
+  state.savings.total=(state.savings.total||0)+saved;
+  state.month={label:monthLabel(),expenses:[]};
+  state.ui.modal=null; persist(); render();
+}
+function resetAll(){
+  const fresh=JSON.parse(JSON.stringify(DEFAULTS));
+  state.config=fresh.config; state.month=fresh.month; state.history=[]; state.savings={total:0};
+  state.ui={tab:"overview",cat:state.config.categories[0].name,amt:"",note:"",modal:null,openHist:null,emojiTarget:null};
+  persist(); render();
+}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-action]"); if(!t) return;
+  const a=t.dataset.action, id=t.dataset.id;
+  switch(a){
+    case "tab": syncInputs(); state.ui.tab=t.dataset.tab; render(); break;
+    case "pick-cat": syncInputs(); state.ui.cat=t.dataset.name; render(); break;
+    case "add-exp": addExpense(); break;
+    case "del-exp": state.month.expenses=state.month.expenses.filter(x=>x.id!==id); persist(); render(); break;
+    case "ask-close": syncInputs(); state.ui.modal="close"; render(); break;
+    case "do-close": closeMonth(); break;
+    case "ask-reset": state.ui.modal="reset"; render(); break;
+    case "do-reset": resetAll(); break;
+    case "modal-close": state.ui.modal=null; state.ui.emojiTarget=null; render(); break;
+    case "modal-bg": if(e.target.classList.contains("scrim")){ state.ui.modal=null; state.ui.emojiTarget=null; render(); } break;
+    case "toggle-hist": state.ui.openHist=state.ui.openHist===id?null:id; render(); break;
+    case "set-theme": state.config.theme=t.dataset.theme; persist(); render(); break;
+    case "pick-emoji": state.ui.emojiTarget={type:t.dataset.type,id:t.dataset.id}; state.ui.modal="emoji"; render(); break;
+    case "set-emoji": {
+      const tgt=state.ui.emojiTarget;
+      if(tgt){ const arr=tgt.type==="cat"?state.config.categories:state.config.fixedCosts; const o=arr.find(x=>x.id===tgt.id); if(o) o.emoji=t.dataset.emoji; }
+      state.ui.modal=null; state.ui.emojiTarget=null; persist(); render(); break;
+    }
+    case "del-cat": state.config.categories=state.config.categories.filter(c=>c.id!==id); persist(); render(); break;
+    case "add-cat": state.config.categories.push({id:uid(),name:"Neu",budget:0,emoji:"🏷️"}); persist(); render(); break;
+    case "del-fix": state.config.fixedCosts=state.config.fixedCosts.filter(f=>f.id!==id); persist(); render(); break;
+    case "add-fix": state.config.fixedCosts.push({id:uid(),name:"Neu",amount:0,emoji:"📌"}); persist(); render(); break;
+    case "sav-add": case "sav-sub": {
+      const i=document.getElementById("sav"); const v=parseNum(i?i.value:0); if(v<=0) return;
+      const sign=a==="sav-add"?1:-1; state.savings.total=Math.max(0,(state.savings.total||0)+sign*v); persist(); render(); break;
+    }
+  }
+});
+
+document.addEventListener("change",e=>{
+  const t=e.target.closest("[data-field]"); if(!t) return;
+  const f=t.dataset.field, id=t.dataset.id, val=t.value;
+  if(f==="income") state.config.income=parseNum(val)||state.config.income;
+  else if(f==="goal") state.config.savingsGoal=parseNum(val)||state.config.savingsGoal;
+  else if(f==="cat-name"){ const c=state.config.categories.find(x=>x.id===id); if(c) c.name=val; }
+  else if(f==="cat-budget"){ const c=state.config.categories.find(x=>x.id===id); if(c) c.budget=parseNum(val); }
+  else if(f==="fix-name"){ const x=state.config.fixedCosts.find(y=>y.id===id); if(x) x.name=val; }
+  else if(f==="fix-amount"){ const x=state.config.fixedCosts.find(y=>y.id===id); if(x) x.amount=parseNum(val); }
+  persist();
+});
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && e.target.id==="amt"){ e.preventDefault(); addExpense(); }
+});
+
+applyTheme();
+render();
+</script>
+</body>
+</html>
