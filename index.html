@@ -82,7 +82,7 @@
   .navbtn.on svg{stroke:var(--accent); stroke-width:2.4;}
 
   .scrim{position:fixed; inset:0; z-index:50; background:rgba(10,9,8,.5); display:flex; align-items:flex-end; justify-content:center; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom));}
-  .sheet{width:100%; max-width:480px; background:var(--surface); border-radius:18px; padding:20px; max-height:80vh; overflow-y:auto;}
+  .sheet{width:100%; max-width:480px; background:var(--surface); border-radius:18px; padding:20px; max-height:82vh; overflow-y:auto;}
   .btn{flex:1; padding:13px; border-radius:12px; font-size:14px; font-weight:700; border:1px solid var(--line); background:var(--panel); color:var(--text);}
   .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
   .btn.danger{background:var(--red); color:#fff; border-color:var(--red);}
@@ -102,6 +102,14 @@
   .egrid{display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-top:14px;}
   .egrid button{font-size:24px; aspect-ratio:1; border-radius:10px; background:var(--panel); display:flex; align-items:center; justify-content:center;}
   .egrid button:active{transform:scale(.9);}
+  .mgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px;}
+  .mgrid button{padding:12px 0; border-radius:10px; background:var(--panel); font-size:14px; font-weight:600;}
+  .mgrid button.on{background:var(--accent); color:#fff;}
+  .yearnav{display:flex; align-items:center; justify-content:space-between; margin-top:14px;}
+  .yearnav button{width:42px; height:42px; border-radius:10px; background:var(--panel); font-size:20px; font-weight:700;}
+  .ehrow{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0;}
+  .ehinput{width:120px; text-align:right; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 9px; font-size:14px;}
+  .iconbtn{padding:7px 10px; border-radius:9px; background:var(--panel); font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:5px;}
 </style>
 </head>
 <body>
@@ -112,13 +120,17 @@
 <script>
 const KEY = "budget_v1";
 const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-const monthLabel = (d=new Date()) => MONTHS[d.getMonth()] + " " + d.getFullYear();
+const MSHORT = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+const monthLabelFrom = (y,m) => MONTHS[m] + " " + y;
 const fmt = n => (n||0).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2});
 const parseNum = s => { const v=parseFloat(String(s).replace(",",".")); return isNaN(v)?0:v; };
 const uid = () => Math.random().toString(36).slice(2,9);
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const getEl = id => document.getElementById(id);
 
 const EMOJIS = ["🛒","🍔","🍽️","☕","🍺","⛽","🚗","🏍️","🅿️","🚆","✈️","🏠","🛍️","👕","👟","💪","🎮","🎬","🎵","📚","🎁","✨","💸","💳","🧾","💡","🔧","🪚","🪙","📱","💻","📺","🏥","💊","🐕","🌱","🌸","💐","❤️","🔥","🎉","🍕","🥦","🧴","🪑","📌","🏷️","💰"];
+
+function freshMonth(){ const d=new Date(); return {y:d.getFullYear(), m:d.getMonth(), expenses:[]}; }
 
 const DEFAULTS = {
   config:{
@@ -138,27 +150,39 @@ const DEFAULTS = {
       {id:"c4",name:"Gönnen",budget:230,emoji:"✨"},
     ],
   },
-  month:{label:monthLabel(), expenses:[]},
+  month:freshMonth(),
   history:[],
   savings:{total:0},
 };
+
+function deriveYM(month){
+  if(month && Number.isInteger(month.m) && Number.isInteger(month.y)) return {y:month.y,m:month.m};
+  if(month && month.label){
+    const p=String(month.label).trim().split(/\s+/);
+    const mi=MONTHS.indexOf(p[0]); const yr=parseInt(p[1],10);
+    if(mi>=0 && yr) return {y:yr,m:mi};
+  }
+  const d=new Date(); return {y:d.getFullYear(),m:d.getMonth()};
+}
 
 let state;
 function load(){
   try{ const r=localStorage.getItem(KEY); if(r){ const p=JSON.parse(r);
     const cfg=p.config||{}; if(!cfg.theme) cfg.theme="auto";
-    return {config:cfg,month:p.month,history:p.history||[],savings:p.savings||{total:0}}; } }catch(e){}
+    const mon=p.month||{}; const ym=deriveYM(mon);
+    return {config:cfg, month:{y:ym.y,m:ym.m,expenses:mon.expenses||[]}, history:p.history||[], savings:p.savings||{total:0}}; } }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULTS));
 }
 function persist(){ try{ localStorage.setItem(KEY, JSON.stringify({config:state.config,month:state.month,history:state.history,savings:state.savings})); }catch(e){} }
 
 state = load();
-state.ui = { tab:"overview", cat:state.config.categories[0]?.name||"", amt:"", note:"", modal:null, openHist:null, emojiTarget:null };
+state.ui = { tab:"overview", cat:state.config.categories[0]?.name||"", amt:"", note:"", modal:null, openHist:null, editHist:null, emojiTarget:null, pickYear:state.month.y, delHistId:null };
 
 const fixedTotal = () => state.config.fixedCosts.reduce((s,f)=>s+(+f.amount||0),0);
 const variableTotal = () => state.month.expenses.reduce((s,e)=>s+e.amount,0);
 const available = () => state.config.income - fixedTotal() - variableTotal();
 const spentByCat = name => state.month.expenses.filter(e=>e.category===name).reduce((s,e)=>s+e.amount,0);
+const curLabel = () => monthLabelFrom(state.month.y, state.month.m);
 
 function applyTheme(){
   const t=state.config.theme||"auto"; const root=document.documentElement;
@@ -212,7 +236,10 @@ function viewOverview(){
 
   return `
   <div class="px" style="padding-top:28px;padding-bottom:8px;display:flex;align-items:flex-end;justify-content:space-between">
-    <div><div class="eyebrow">Budget</div><div class="h1">${esc(state.month.label)}</div></div>
+    <button class="focusable" data-action="pick-month" style="text-align:left">
+      <div class="eyebrow">Budget</div>
+      <div class="h1">${esc(curLabel())} <span style="font-size:15px;color:var(--muted);font-weight:700">▾</span></div>
+    </button>
     <button class="focusable" data-action="ask-close" style="font-size:11px;font-weight:700;padding:8px 12px;border-radius:8px;border:1px solid var(--line);color:var(--muted);background:var(--surface)">Monat abschließen</button>
   </div>
 
@@ -298,14 +325,30 @@ function viewHistory(){
     return `<div class="px" style="padding-top:28px"><div class="eyebrow">Rückblick</div><div class="h1">Verlauf</div>
       <div class="empty" style="margin-top:20px">Noch keine abgeschlossenen Monate. Schließ deinen ersten Monat ab, um ihn hier zu vergleichen.</div></div>`;
   const items=state.history.map(h=>{
-    const open=state.ui.openHist===h.id;
-    const detail=open?`<div style="padding:0 16px 16px;border-top:1px solid var(--line)">
+    const open=state.ui.openHist===h.id || state.ui.editHist===h.id;
+    const editing=state.ui.editHist===h.id;
+    let detail="";
+    if(open && !editing){
+      detail=`<div style="padding:0 16px 16px;border-top:1px solid var(--line)">
         <div class="row" style="gap:8px;padding:12px 0">
           <div style="flex:1;background:var(--panel);border-radius:8px;padding:8px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Fixkosten</div><div class="mono" style="font-weight:700">${fmt(h.fixedTotal)} €</div></div>
           <div style="flex:1;background:var(--panel);border-radius:8px;padding:8px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Ausgaben</div><div class="mono" style="font-weight:700">${fmt(h.variableTotal)} €</div></div>
         </div>
         ${(h.byCategory||[]).map(c=>`<div class="row" style="justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:var(--muted)">${esc(c.name)}</span><span class="mono" style="color:${c.spent>c.budget?'var(--red)':'var(--text)'}">${fmt(c.spent)} / ${fmt(c.budget)} €</span></div>`).join("")}
-      </div>`:"";
+        <div style="margin-top:12px"><button class="iconbtn focusable" data-action="edit-hist" data-id="${h.id}">✏️ Bearbeiten</button></div>
+      </div>`;
+    } else if(editing){
+      detail=`<div style="padding:0 16px 16px;border-top:1px solid var(--line)">
+        <div class="ehrow" style="padding-top:14px"><span style="font-size:14px;font-weight:700;color:var(--green)">Gespart</span><span class="row" style="gap:4px"><input id="eh-saved" class="ehinput mono" inputmode="decimal" value="${h.saved}"><span class="mono" style="color:var(--muted)">€</span></span></div>
+        <div class="sect" style="margin:10px 0 4px">Ausgaben pro Kategorie</div>
+        ${(h.byCategory||[]).map((c,i)=>`<div class="ehrow"><span style="font-size:14px">${esc(c.name)}</span><span class="row" style="gap:4px"><input id="eh-cat-${i}" class="ehinput mono" inputmode="decimal" value="${c.spent}"><span class="mono" style="color:var(--muted)">€</span></span></div>`).join("")}
+        <div class="row" style="gap:8px;margin-top:16px">
+          <button class="btn focusable" data-action="cancel-hist">Abbrechen</button>
+          <button class="btn primary focusable" data-action="save-hist" data-id="${h.id}">Speichern</button>
+        </div>
+        <button class="btn danger focusable" data-action="ask-del-hist" data-id="${h.id}" style="width:100%;margin-top:8px">Diesen Monat löschen</button>
+      </div>`;
+    }
     return `<div class="card" style="overflow:hidden">
       <button class="focusable" data-action="toggle-hist" data-id="${h.id}" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;text-align:left">
         <div><div style="font-size:15px;font-weight:800">${esc(h.label)}</div><div class="mono" style="font-size:12px;color:var(--green)">+ ${fmt(h.saved)} € gespart</div></div>
@@ -368,11 +411,26 @@ function viewSettings(){
 
 function viewModal(){
   if(state.ui.modal==="close"){
-    const av=Math.max(0,available());
+    const av=Math.max(0,available()); let nm=state.month.m+1, ny=state.month.y; if(nm>11){nm=0;ny++;}
     return `<div class="scrim" data-action="modal-bg"><div class="sheet">
       <div style="font-size:18px;font-weight:800">Monat abschließen?</div>
-      <p style="font-size:14px;margin-top:8px;color:var(--muted)"><span class="mono" style="font-weight:700;color:${available()>=0?'var(--green)':'var(--red)'}">${fmt(av)} €</span> wandern in deinen Spar-Topf. „${esc(state.month.label)}“ landet im Verlauf, danach startet ein neuer Monat bei null.</p>
+      <p style="font-size:14px;margin-top:8px;color:var(--muted)"><span class="mono" style="font-weight:700;color:${available()>=0?'var(--green)':'var(--red)'}">${fmt(av)} €</span> wandern in deinen Spar-Topf. „${esc(curLabel())}“ landet im Verlauf, danach startet <b>${esc(monthLabelFrom(ny,nm))}</b> bei null.</p>
       <div class="row" style="gap:8px;margin-top:20px"><button class="btn focusable" data-action="modal-close">Abbrechen</button><button class="btn primary focusable" data-action="do-close">Abschließen</button></div>
+    </div></div>`;
+  }
+  if(state.ui.modal==="month"){
+    const py=state.ui.pickYear ?? state.month.y;
+    return `<div class="scrim" data-action="modal-bg"><div class="sheet">
+      <div class="row" style="justify-content:space-between"><div style="font-size:18px;font-weight:800">Monat wählen</div><button class="focusable" data-action="modal-close" style="font-size:20px;color:var(--muted)">✕</button></div>
+      <div class="yearnav">
+        <button class="focusable" data-action="year-prev">‹</button>
+        <div class="mono" style="font-size:22px;font-weight:800">${py}</div>
+        <button class="focusable" data-action="year-next">›</button>
+      </div>
+      <div class="mgrid">
+        ${MSHORT.map((mm,i)=>`<button class="${(i===state.month.m && py===state.month.y)?'on':''} focusable" data-action="set-month" data-m="${i}">${mm}</button>`).join("")}
+      </div>
+      <p style="font-size:12px;margin-top:14px;color:var(--muted)">Damit legst du fest, welcher Monat gerade läuft. Beim Abschließen geht's automatisch zum nächsten weiter.</p>
     </div></div>`;
   }
   if(state.ui.modal==="reset"){
@@ -380,6 +438,14 @@ function viewModal(){
       <div style="font-size:18px;font-weight:800">Alles zurücksetzen?</div>
       <p style="font-size:14px;margin-top:8px;color:var(--muted)">Löscht alle Ausgaben, den Verlauf und den Spar-Topf. Die Standard-Kategorien kommen zurück. Das lässt sich nicht rückgängig machen.</p>
       <div class="row" style="gap:8px;margin-top:20px"><button class="btn focusable" data-action="modal-close">Abbrechen</button><button class="btn danger focusable" data-action="do-reset">Zurücksetzen</button></div>
+    </div></div>`;
+  }
+  if(state.ui.modal==="delhist"){
+    const h=state.history.find(x=>x.id===state.ui.delHistId);
+    return `<div class="scrim" data-action="modal-bg"><div class="sheet">
+      <div style="font-size:18px;font-weight:800">Monat löschen?</div>
+      <p style="font-size:14px;margin-top:8px;color:var(--muted)">„${h?esc(h.label):''}“ wird aus dem Verlauf entfernt${h?` und ${fmt(h.saved)} € werden vom Spar-Topf abgezogen`:''}. Das lässt sich nicht rückgängig machen.</p>
+      <div class="row" style="gap:8px;margin-top:20px"><button class="btn focusable" data-action="modal-close">Abbrechen</button><button class="btn danger focusable" data-action="do-del-hist">Löschen</button></div>
     </div></div>`;
   }
   if(state.ui.modal==="emoji"){
@@ -401,15 +467,15 @@ function render(){
           : state.ui.tab==="savings"?viewSavings()
           : state.ui.tab==="history"?viewHistory()
           : viewSettings();
-  document.getElementById("app").innerHTML = v;
-  document.getElementById("nav").innerHTML = navHtml();
-  document.getElementById("modal").innerHTML = viewModal();
+  getEl("app").innerHTML = v;
+  getEl("nav").innerHTML = navHtml();
+  getEl("modal").innerHTML = viewModal();
   applyTheme();
 }
 
 function syncInputs(){
-  const a=document.getElementById("amt"); if(a) state.ui.amt=a.value;
-  const n=document.getElementById("note"); if(n) state.ui.note=n.value;
+  const a=getEl("amt"); if(a) state.ui.amt=a.value;
+  const n=getEl("note"); if(n) state.ui.note=n.value;
 }
 
 function addExpense(){
@@ -417,21 +483,37 @@ function addExpense(){
   const v=parseNum(state.ui.amt); if(v<=0) return;
   state.month.expenses.unshift({id:uid(),amount:v,category:state.ui.cat,note:(state.ui.note||"").trim(),date:new Date().toISOString()});
   state.ui.amt=""; state.ui.note=""; persist(); render();
-  const a=document.getElementById("amt"); if(a) a.focus();
+  const a=getEl("amt"); if(a) a.focus();
 }
 function closeMonth(){
   const saved=Math.max(0,available());
-  const entry={id:uid(),label:state.month.label,total:fixedTotal()+variableTotal(),fixedTotal:fixedTotal(),variableTotal:variableTotal(),
+  const entry={id:uid(),label:curLabel(),total:fixedTotal()+variableTotal(),fixedTotal:fixedTotal(),variableTotal:variableTotal(),
     saved, byCategory:state.config.categories.map(c=>({name:c.name,spent:spentByCat(c.name),budget:c.budget})), closedAt:new Date().toISOString()};
   state.history.unshift(entry);
   state.savings.total=(state.savings.total||0)+saved;
-  state.month={label:monthLabel(),expenses:[]};
+  let m=state.month.m+1, y=state.month.y; if(m>11){m=0;y++;}
+  state.month={y,m,expenses:[]};
   state.ui.modal=null; persist(); render();
 }
+function saveHist(id){
+  const h=state.history.find(x=>x.id===id); if(!h) return;
+  const ns=getEl("eh-saved"); const newSaved=ns?parseNum(ns.value):h.saved;
+  const newCats=(h.byCategory||[]).map((c,i)=>{ const el=getEl("eh-cat-"+i); return {...c, spent: el?parseNum(el.value):c.spent}; });
+  const newVar=newCats.reduce((s,c)=>s+c.spent,0);
+  state.savings.total=Math.max(0,(state.savings.total||0)+(newSaved-(h.saved||0)));
+  h.saved=newSaved; h.byCategory=newCats; h.variableTotal=newVar; h.total=(h.fixedTotal||0)+newVar;
+  state.ui.editHist=null; persist(); render();
+}
+function delHist(id){
+  const h=state.history.find(x=>x.id===id); if(!h) return;
+  state.savings.total=Math.max(0,(state.savings.total||0)-(h.saved||0));
+  state.history=state.history.filter(x=>x.id!==id);
+  state.ui.editHist=null; state.ui.openHist=null; state.ui.modal=null; state.ui.delHistId=null; persist(); render();
+}
 function resetAll(){
-  const fresh=JSON.parse(JSON.stringify(DEFAULTS));
+  const fresh=JSON.parse(JSON.stringify(DEFAULTS)); fresh.month=freshMonth();
   state.config=fresh.config; state.month=fresh.month; state.history=[]; state.savings={total:0};
-  state.ui={tab:"overview",cat:state.config.categories[0].name,amt:"",note:"",modal:null,openHist:null,emojiTarget:null};
+  state.ui={tab:"overview",cat:state.config.categories[0].name,amt:"",note:"",modal:null,openHist:null,editHist:null,emojiTarget:null,pickYear:state.month.y,delHistId:null};
   persist(); render();
 }
 
@@ -445,11 +527,20 @@ document.addEventListener("click",e=>{
     case "del-exp": state.month.expenses=state.month.expenses.filter(x=>x.id!==id); persist(); render(); break;
     case "ask-close": syncInputs(); state.ui.modal="close"; render(); break;
     case "do-close": closeMonth(); break;
+    case "pick-month": syncInputs(); state.ui.pickYear=state.month.y; state.ui.modal="month"; render(); break;
+    case "year-prev": state.ui.pickYear=(state.ui.pickYear??state.month.y)-1; render(); break;
+    case "year-next": state.ui.pickYear=(state.ui.pickYear??state.month.y)+1; render(); break;
+    case "set-month": state.month.y=state.ui.pickYear??state.month.y; state.month.m=parseInt(t.dataset.m,10); state.ui.modal=null; persist(); render(); break;
     case "ask-reset": state.ui.modal="reset"; render(); break;
     case "do-reset": resetAll(); break;
-    case "modal-close": state.ui.modal=null; state.ui.emojiTarget=null; render(); break;
-    case "modal-bg": if(e.target.classList.contains("scrim")){ state.ui.modal=null; state.ui.emojiTarget=null; render(); } break;
-    case "toggle-hist": state.ui.openHist=state.ui.openHist===id?null:id; render(); break;
+    case "modal-close": state.ui.modal=null; state.ui.emojiTarget=null; state.ui.delHistId=null; render(); break;
+    case "modal-bg": if(e.target.classList.contains("scrim")){ state.ui.modal=null; state.ui.emojiTarget=null; state.ui.delHistId=null; render(); } break;
+    case "toggle-hist": if(state.ui.editHist===id){} else { state.ui.openHist=state.ui.openHist===id?null:id; } render(); break;
+    case "edit-hist": state.ui.editHist=id; state.ui.openHist=id; render(); break;
+    case "cancel-hist": state.ui.editHist=null; render(); break;
+    case "save-hist": saveHist(id); break;
+    case "ask-del-hist": state.ui.delHistId=id; state.ui.modal="delhist"; render(); break;
+    case "do-del-hist": delHist(state.ui.delHistId); break;
     case "set-theme": state.config.theme=t.dataset.theme; persist(); render(); break;
     case "pick-emoji": state.ui.emojiTarget={type:t.dataset.type,id:t.dataset.id}; state.ui.modal="emoji"; render(); break;
     case "set-emoji": {
@@ -462,7 +553,7 @@ document.addEventListener("click",e=>{
     case "del-fix": state.config.fixedCosts=state.config.fixedCosts.filter(f=>f.id!==id); persist(); render(); break;
     case "add-fix": state.config.fixedCosts.push({id:uid(),name:"Neu",amount:0,emoji:"📌"}); persist(); render(); break;
     case "sav-add": case "sav-sub": {
-      const i=document.getElementById("sav"); const v=parseNum(i?i.value:0); if(v<=0) return;
+      const i=getEl("sav"); const v=parseNum(i?i.value:0); if(v<=0) return;
       const sign=a==="sav-add"?1:-1; state.savings.total=Math.max(0,(state.savings.total||0)+sign*v); persist(); render(); break;
     }
   }
